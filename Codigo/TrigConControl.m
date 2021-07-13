@@ -84,7 +84,7 @@ ttotal=20
 t=0:deltaT:ttotal
 
 figure;
-pause();
+% pause();
 for i=2:length(t)
    %evolución del sistema real
    x=F*x+G*u;

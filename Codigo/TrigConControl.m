@@ -1,16 +1,44 @@
 %% Inicialización del algoritmo 
-%Posiciones iniciales de los agentes 
+
 close all
 clear all
+%parametros de la simulación 
+%definicion de incertidumbre de medicion del sensor
+sigma=10 %cm
+
+
+% factor de ganancia de la ley de control
+k=0.5;
+%distancia temporal entre las mediciones
+tmed=0.05 %s
+deltaT=tmed  %s
+dt=deltaT
+%tiempo de simulaición 
+ttotal=20;
+%vector de tiempo
+t=0:deltaT:ttotal;
+
+%posiciones deseadas con la formación
+pdeseada=[-200,-200;200,-200;200,200;-200,200]';
+
+% Posciones relativas deseadas entre agentes 
+z1d=[pdeseada(:,1),pdeseada(:,1),pdeseada(:,1)]-pdeseada(:,2:end); %respecto a agente a_o
+z2d=[pdeseada(:,2),pdeseada(:,2),pdeseada(:,2)]-[pdeseada(:,1),pdeseada(:,3:end)]; %respecto a agente a_r
+z3d=[pdeseada(:,3),pdeseada(:,3),pdeseada(:,3)]-[pdeseada(:,1:2),pdeseada(:,4)]; %respecto a agente a_1
+z4d=[pdeseada(:,4),pdeseada(:,4),pdeseada(:,4)]-[pdeseada(:,1:3)]; %respecto a agente a_2
+
+
+%Posiciones iniciales de los agentes 
 ao=[0,0] 
 ar=[400,200] 
+a1=[-100,300]
+a2=[200, 300]
+ai=[a1;a2]
 %definición de recta para clasificación del resto de los agentes 
 m=(ar(2)-ao(2))/(ar(1)-ao(1))
 c=ar(2)-m*ar(1)
 % definición de agentes ai
-a1=[-100,300]
-a2=[200, 300]
-ai=[a1;a2]
+
 signo=[zeros(length(ai(:,2)),1)]
 if ar(1)>ao(1)
         theta=atan((ar(2)-ao(2))/(ar(1)-ao(1)))
@@ -43,29 +71,12 @@ AN=[ao-ao;arN;a1N;a2N];
 
 %se definen velocidades vdes de los agentes 
 uo=[0,50]; %cm/s
-ur=[0,50]; %cm/s
+ur=[0,65]; %cm/s
 u1=[0,50]; %cm/s
 u2=[0,50]; %cm/s
 
 
-%definicion de incertidumbre de medicion del sensor
-sigma=10 %cm
 
-
-% factor de ganancia de la ley de control
-k=1;
-%distancia temporal entre las mediciones
-tmed=0.4333  %s
-deltaT=tmed  %s
-
-%posiciones deseadas con la formación
-pdeseada=[-200,-200;200,-200;200,200;-200,200]';
-
-% Posciones relativas deseadas entre agentes 
-z1d=[pdeseada(:,1),pdeseada(:,1),pdeseada(:,1)]-pdeseada(:,2:end); %respecto a agente a_o
-z2d=[pdeseada(:,2),pdeseada(:,2),pdeseada(:,2)]-[pdeseada(:,1),pdeseada(:,3:end)]; %respecto a agente a_r
-z3d=[pdeseada(:,3),pdeseada(:,3),pdeseada(:,3)]-[pdeseada(:,1:2),pdeseada(:,4)]; %respecto a agente a_1
-z4d=[pdeseada(:,4),pdeseada(:,4),pdeseada(:,4)]-[pdeseada(:,1:3)]; %respecto a agente a_2
 
 %posciones iniciales del algoritmo
 po=[0,0];
@@ -78,16 +89,83 @@ u=[uo,ur,u1,u2]'
 
 F=eye(8) 
 G=eye(8)*deltaT
-%tiempo de simulaición 
-ttotal=20
-%vector de tiempo
-t=0:deltaT:ttotal
+
 
 figure;
-% pause();
+i=1;
+set(gcf, 'Position',  [0,0, 1500, 1500])
+subplot(2,2,1)
+%Coordenadas globales
+ h1=plot(ao(1),ao(2),'kx','LineWidth',5)
+hold on
+h2=plot(ar(1),ar(2),'rx','LineWidth',5);
+h3=plot(a1(1),a1(2),'gx','LineWidth',5);
+h4=plot(a2(1),a2(2),'bx','LineWidth',5);
+hglobal=[h1,h2,h3,h4];
+title('Coordenadas globales')
+   xlabel('x(cm)')
+   ylabel('y(cm)')
+   legend('$a_1$','$a_2$','$a_3$','$a_4$','Location','bestoutside','Interpreter','Latex')
+   set(gca,'FontSize',14)
+   axis([-40,800,-100 2000])
+   axis('equal')
+subplot(2,2,3)
+%Coordenadas relativas
+plot(0,0,'k*','LineWidth',5)
+ hold on
+ h5=plot(pr(1),pr(2),'r*','LineWidth',5);
+h6=plot(p1(1),p1(2),'g*','LineWidth',5);
+h7=plot(p2(1),p2(2),'b*','LineWidth',5);
+hrel=[h5,h6,h7];
+   % Coordendas relativas reales 
+h8=plot(pr(1),pr(2),'rd','LineWidth',3)
+h9=plot(p1(1),p1(2),'gd','LineWidth',3)
+h10=plot(p2(1),p2(2),'bd','LineWidth',3)
+   %puntos deseados
+   hold on
+   ellipse(20,20,0,-z1d(1,1),-z1d(2,1),'r') 
+   ellipse(20,20,0,-z1d(1,2),-z1d(2,2),'g') 
+   ellipse(20,20,0,-z1d(1,3),-z1d(2,3),'b') 
+%    axis([-200,600,-100 500])
+   axis('equal')
+   title('Coordenadas relativas')
+   xlabel('x(cm)')
+   ylabel('y(cm)')
+   legend('$a_1$','$a_2$','$a_3$','$a_4$','Location','bestoutside','Interpreter','Latex')
+   set(gca,'FontSize',14)
+
+% Distancia al objetivo
+
+prreal=[pr(1),pr(2)];
+p1real=[p1(1),p1(2)];
+p2real=[p2(1),p2(2)];
+aux=z2d(:,1)-prreal';
+   dformro(i)=sqrt(aux(1)^2+aux(2)^2);
+   aux=z3d(:,1)-p1real';
+   dform1o(i)=sqrt(aux(1)^2+aux(2)^2);
+   aux=z4d(:,1)-p2real';
+   dform2o(i)=sqrt(aux(1)^2+aux(2)^2);
+taux=0:dt:ttotal
+subplot(2,2,[2,4])
+h11=plot(taux(1:i),dformro(1:i),'r')
+hold on
+h12=plot(taux(1:i),dform1o(1:i),'g')
+h13=plot(taux(1:i),dform2o(1:i),'b')
+yline(20,'-','LineWidth',3);
+xlabel('t(s)')
+ylabel('d_{i1}^{obj}(cm)')
+xlim([0 ttotal])
+% set(gca, 'XScale', 'log')
+set(gca, 'YScale', 'log')
+legend('$a_2$','$a_3$','$a_4$','L\''imite','Location','best','Interpreter','Latex')
+set(gca,'FontSize',18)
+
+
+
+pause();
 for i=2:length(t)
    %evolución del sistema real
-   x=F*x+G*u;
+   x=real(F*x+G*u);
    %distancias con incertidumbre
     hatdro=sqrt((x(1)-x(3))^2+(x(2)-x(4))^2);
    hatd1o=sqrt((x(1)-x(5))^2+(x(2)-x(6))^2); 
@@ -111,51 +189,24 @@ for i=2:length(t)
    p1real=[cosd(alpha1)*hatd1o,signo(1)*sind(alpha1)*hatd1o];
    p2real=[cosd(alpha2)*hatd2o,signo(2)*sind(alpha2)*hatd2o];
  
-   subplot(2,1,1)
-   hold off
-   plot(x(1),x(2),'kx','LineWidth',5)
-   hold on
-   plot(x(3),x(4),'rx','LineWidth',5)
-   plot(x(5),x(6),'gx','LineWidth',5)
-   plot(x(7),x(8),'bx','LineWidth',5)
-   axis([-600,600,-100 2000])
-   title(['t=2s'])
-   xlabel('x(cm)')
-   ylabel('y(cm)')
-   set(gca,'FontSize',16)
+   
+   %  Coordenadas globales 
+   set(h1,'Xdata',real(x(1)),'Ydata',real(x(2)))
+    set(h2,'Xdata',real(x(3)),'Ydata',real(x(4)))
+    set(h3,'Xdata',real(x(5)),'Ydata',real(x(6)))
+    set(h4,'Xdata',real(x(7)),'Ydata',real(x(8)))
   
   
-   legend('$a_1$','$a_2$','$a_3$','$a_4$','Interpreter','Latex')
-   axis('equal')
-   title('Coordenadas globales')
-   subplot(2,1,2)
-   hold off
    
-   plot(0,0,'k*','LineWidth',5)
-   hold on
-   plot(pr(1),pr(2),'r*','LineWidth',5)
-   plot(p1(1),p1(2),'g*','LineWidth',5)
-   plot(p2(1),p2(2),'b*','LineWidth',5)
-   % Coordendas relativas reales 
-   plot(prreal(1),prreal(2),'rd','LineWidth',3)
-   plot(p1real(1),p1real(2),'gd','LineWidth',3)
-   plot(p2real(1),p2real(2),'bd','LineWidth',3)
-   %puntos deseados
-   hold on
-   ellipse(20,20,0,-z1d(1,1),-z1d(2,1),'r')
-  
-   ellipse(20,20,0,-z1d(1,2),-z1d(2,2),'g')
+   %coordenadas relativas estimadas
+set(h5,'Xdata',real(pr(1)),'Ydata',real(pr(2)))
+set(h6,'Xdata',real(p1(1)),'Ydata',real(p1(2)))
+set(h7,'Xdata',real(p2(1)),'Ydata',real(p2(2)))
+%coordenadas relativas reales 
+set(h8,'Xdata',real(prreal(1)),'Ydata',real(prreal(2)))
+set(h9,'Xdata',real(p1real(1)),'Ydata',real(p1real(2)))
+set(h10,'Xdata',real(p2real(1)),'Ydata',real(p2real(2)))
    
-   ellipse(20,20,0,-z1d(1,3),-z1d(2,3),'b')
-   
-   axis('equal')
-   title('Coordenadas relativas')
-   xlabel('x(cm)')
-   ylabel('y(cm)')
-   legend('$a_1$','$a_2$','$a_3$','$a_4$','Interpreter','Latex')
-   set(gca,'FontSize',16)
-   hold off
-
    %Aplico ley de control
    z1=[po;po;po]'-[pr;p1;p2]';
    z2=[pr;pr;pr]'-[po;p1;p2]';
@@ -177,6 +228,11 @@ for i=2:length(t)
    dform1o(i)=sqrt(aux(1)^2+aux(2)^2);
    aux=z4d(:,1)-p2real';
    dform2o(i)=sqrt(aux(1)^2+aux(2)^2);
+   
+   set(h11,'Xdata',taux(1:i),'Ydata',real(dformro(1:i)))
+   set(h12,'Xdata',taux(1:i),'Ydata',real(dform1o(1:i)))
+   set(h13,'Xdata',taux(1:i),'Ydata',real(dform2o(1:i)))
+   
    pause(0.01)
    
 end

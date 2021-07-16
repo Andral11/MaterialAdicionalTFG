@@ -1,11 +1,17 @@
 %% Grafica de sistema en coordenadas absolutas
 close all
 clear all
+%parametros de la simulación
 sigmaV=10; %Definición de incertidumbre de velocidad
 k=1; %ganancia de ley de control
+dt=0.1 %paso de predicción 
+%tiempo de simulacion
+t=40;
+%tiempo entre mediciones tmed
+tmed=5 %s
 % velocidades de desplazamiento de los vehiculos 
 u1=[0,50]
-u2=[0,65]
+u2=[0,50]
 u3=[0,50]
 u4=[0,50]
 u=[u1,u2,u3,u4]'
@@ -15,7 +21,9 @@ q2=[600,0]
 q3=[-100,300]
 q4=[200,300]
 % definición de formación a seguir
-pdeseada=[-200,-200;200,-200;200,200;-200,200]';
+pdeseada=[-200,-200;200,0;200,200;-200,200]';
+
+
 %posiciones relativas deseadas con la formación
 z1d=[pdeseada(:,1),pdeseada(:,1),pdeseada(:,1)]-pdeseada(:,2:end); %respecto a agente a_1
 z2d=[pdeseada(:,2),pdeseada(:,2),pdeseada(:,2)]-[pdeseada(:,1),pdeseada(:,3:end)]; %respecto a agente a_2
@@ -27,7 +35,6 @@ q=[q1,q2,q3,q4]'
 qini=q
 %matrices F y G para coordenadas absolutas
 F=eye(8)
-dt=0.1
 G=F*dt
 %Matrices de coordenadas relativas 
 Frel=eye(6);
@@ -35,19 +42,95 @@ P=eye(6)*0; %se asume incertidumbre inicial nula
 Q=eye(6)*(sqrt(2)*sigmaV)^2; %matriz de incertidumbre de entrada (velocidades relativas)
 Grel=eye(6)*dt;
 qrel=[q(3)-q(1),q(4)-q(2),q(5)-q(1),q(6)-q(2),q(7)-q(1),q(8)-q(2)]'; %posiciones relativas iniciales
-%tiempo de simulacion
-t=20;
-%tiempo entre mediciones tmed
-tmed=5 %s
-
-
-% generacion de trayectoria real 
 qreal=q;
-% trayectoria estimada
 qlog=q;
-i=2
+
+
+
+%comienza la simulación 
+i=1
 figure;
-% pause();
+set(gcf, 'Position',  [0,0, 1500, 1500])
+subplot(2,2,1)
+%Coordenadas globales
+ h1=plot(qreal(1,i),qreal(2,i),'kx','LineWidth',5)
+hold on
+h2=plot(qreal(3,i),qreal(4,i),'rx','LineWidth',5);
+h3=plot(qreal(5,i),qreal(6,i),'gx','LineWidth',5);
+h4=plot(qreal(7,i),qreal(8,i),'bx','LineWidth',5);
+hglobal=[h1,h2,h3,h4];
+title('Coordenadas globales')
+   xlabel('x(cm)')
+   ylabel('y(cm)')
+   legend('$a_1$','$a_2$','$a_3$','$a_4$','Location','bestoutside','Interpreter','Latex')
+   set(gca,'FontSize',14)
+   axis([-40,800,-100 2500])
+   axis('equal')
+subplot(2,2,3)
+%Coordenadas relativas
+plot(0,0,'k*','LineWidth',5)
+   hold on
+ h5=plot(qrel(1,1),qrel(2,1),'r*','LineWidth',5);
+ 
+h6=plot(qrel(3,1),qrel(4,1),'g*','LineWidth',5);
+hold on
+h7=plot(qrel(5,1),qrel(6,1),'b*','LineWidth',5);
+hrel=[h5,h6,h7];
+   % Coordendas relativas reales 
+ hold on
+h8=plot(qreal(3,1)-qreal(1,1),qreal(4,i)-qreal(2,i),'rd','LineWidth',3)
+h9=plot(qreal(5,i)-qreal(1,i),qreal(6,i)-qreal(2,i),'gd','LineWidth',3)
+h10=plot(qreal(7,i)-qreal(1,i),qreal(8,i)-qreal(2,i),'bd','LineWidth',3)
+   %puntos deseados
+   hold on
+   ellipse(20,20,0,-z1d(1,1),-z1d(2,1),'r') 
+   ellipse(20,20,0,-z1d(1,2),-z1d(2,2),'g') 
+   ellipse(20,20,0,-z1d(1,3),-z1d(2,3),'b') 
+   axis([-200,600,-100 500])
+   axis('equal')
+   title('Coordenadas relativas')
+   xlabel('x(cm)')
+   ylabel('y(cm)')
+   legend('$a_1$','$a_2$','$a_3$','$a_4$','Location','bestoutside','Interpreter','Latex')
+   set(gca,'FontSize',14)
+
+% Distancia al objetivo
+
+prreal=[qreal(3,i)-qreal(1,i),qreal(4,i)-qreal(2,i)];
+p1real=[qreal(5,i)-qreal(1,i),qreal(6,i)-qreal(2,i)];
+p2real=[qreal(7,i)-qreal(1,i),qreal(8,i)-qreal(2,i)];
+aux=z2d(:,1)-prreal';
+   dformro(i)=sqrt(aux(1)^2+aux(2)^2);
+   aux=z3d(:,1)-p1real';
+   dform1o(i)=sqrt(aux(1)^2+aux(2)^2);
+   aux=z4d(:,1)-p2real';
+   dform2o(i)=sqrt(aux(1)^2+aux(2)^2);
+taux=0:dt:t
+subplot(2,2,2)
+h11=plot(taux(1:i),dformro(1:i),'r')
+hold on
+h12=plot(taux(1:i),dform1o(1:i),'g')
+h13=plot(taux(1:i),dform2o(1:i),'b')
+yline(20,'-','LineWidth',3);
+xlabel('t(s)')
+ylabel('d_{i1}^{obj}(cm)')
+xlim([0 t])
+set(gca, 'XScale', 'log')
+% set(gca, 'YScale', 'log')
+legend('$a_2$','$a_3$','$a_4$','L\''imite','Interpreter','Latex')
+set(gca,'FontSize',18)
+
+% Evolución de la incertidumbre
+subplot(2,2,4)
+h14=plot(taux(1:i),0,'LineWidth',1)
+yline(400,'-','LineWidth',3);
+xlabel('t(s)')
+ylabel('\lambda (cm^{2})')
+legend('$\lambda_{max}$','L\''imite','Location','southeast','Interpreter','Latex')
+set(gca,'FontSize',18)
+xlim([0 t])
+i=2;
+pause;
 for j=dt:dt:t
     %velocidad en el instante k 
     ureal=[normrnd(u(1),sigmaV),normrnd(u(2),sigmaV),normrnd(u(3),sigmaV),normrnd(u(4),sigmaV)...
@@ -132,56 +215,21 @@ for j=dt:dt:t
    L4=-k*sum((z4-z4d)');
    u(7:8)=L4+u4;
    
-subplot(2,1,1)
-
+%actualizo grafica
+%coordenadas globales
+set(h1,'Xdata',qreal(1,i),'Ydata',qreal(2,i))
+set(h2,'Xdata',qreal(3,i),'Ydata',qreal(4,i))
+set(h3,'Xdata',qreal(5,i),'Ydata',qreal(6,i))
+set(h4,'Xdata',qreal(7,i),'Ydata',qreal(8,i))
+%coordenadas relativas estimadas
+set(h5,'Xdata',qrel(1,i),'Ydata',qrel(2,i))
+set(h6,'Xdata',qrel(3,i),'Ydata',qrel(4,i))
+set(h7,'Xdata',qrel(5,i),'Ydata',qrel(6,i))
+%coordenadas relativas reales 
+set(h8,'Xdata',qreal(3,i)-qreal(1,i),'Ydata',qreal(4,i)-qreal(2,i))
+set(h9,'Xdata',qreal(5,i)-qreal(1,i),'Ydata',qreal(6,i)-qreal(2,i))
+set(h10,'Xdata',qreal(7,i)-qreal(1,i),'Ydata',qreal(8,i)-qreal(2,i))
 %posición real
-  plot(qreal(1,i),qreal(2,i),'kx','LineWidth',5)
-hold on
-plot(qreal(3,i),qreal(4,i),'rx','LineWidth',5)
-hold on
-plot(qreal(5,i),qreal(6,i),'gx','LineWidth',5)
-hold on
-plot(qreal(7,i),qreal(8,i),'bx','LineWidth',5)
-hold off
-title('Coordenadas globales')
-   xlabel('x(cm)')
-   ylabel('y(cm)')
-   legend('$a_1$','$a_2$','$a_3$','$a_4$','Interpreter','Latex')
-   set(gca,'FontSize',16)
-   axis([-40,800,-100 1000])
-   axis('equal')
-subplot(2,1,2)
-plot(0,0,'k*','LineWidth',5)
-   hold on
- plot(qrel(1,i),qrel(2,i),'r*','LineWidth',5)
-hold on
-plot(qrel(3,i),qrel(4,i),'g*','LineWidth',5)
-hold on
-plot(qrel(5,i),qrel(6,i),'b*','LineWidth',5)
-   % Coordendas relativas reales 
- hold on
-plot(qreal(3,i)-qreal(1,i),qreal(4,i)-qreal(2,i),'rd','LineWidth',3)
-hold on
-plot(qreal(5,i)-qreal(1,i),qreal(6,i)-qreal(2,i),'gd','LineWidth',3)
-hold on
-plot(qreal(7,i)-qreal(1,i),qreal(8,i)-qreal(2,i),'bd','LineWidth',3)
-hold on
-   %puntos deseados
-
-   hold on
-   ellipse(20,20,0,-z1d(1,1),-z1d(2,1),'r')
-  
-   ellipse(20,20,0,-z1d(1,2),-z1d(2,2),'g')
-   
-   ellipse(20,20,0,-z1d(1,3),-z1d(2,3),'b')
-   
-   axis('equal')
-   
-   xlabel('x(cm)')
-   ylabel('y(cm)')
-   legend('$a_1$','$a_2$','$a_3$','$a_4$','Interpreter','Latex')
-   set(gca,'FontSize',16)
-hold off
 prreal=[qreal(3,i)-qreal(1,i),qreal(4,i)-qreal(2,i)];
 p1real=[qreal(5,i)-qreal(1,i),qreal(6,i)-qreal(2,i)];
 p2real=[qreal(7,i)-qreal(1,i),qreal(8,i)-qreal(2,i)];
@@ -191,31 +239,16 @@ aux=z2d(:,1)-prreal';
    dform1o(i)=sqrt(aux(1)^2+aux(2)^2);
    aux=z4d(:,1)-p2real';
    dform2o(i)=sqrt(aux(1)^2+aux(2)^2);
-
-
+set(h11,'Xdata',taux(1:i),'Ydata',dformro(1:i))
+set(h12,'Xdata',taux(1:i),'Ydata',dform1o(1:i))
+set(h13,'Xdata',taux(1:i),'Ydata',dform2o(1:i))
 auto(i)=max(eig(P));
-
-pause(0.01)
+%evolocion de P 
+set(h14,'Xdata',taux(1:i),'Ydata',auto(1:i))
+pause(0.001)
 i=i+1;
 end 
-%% Grafica de distancias
-close all
-figure;
-taux=dt:dt:t
-plot(taux(1:end),dformro(2:end),'r')
-hold on
-plot(taux(1:end),dform1o(2:end),'g')
-hold on
-plot(taux(1:end),dform2o(2:end),'b')
-hold on
-yline(20,'-','LineWidth',3);
-xlabel('t(s)')
-ylabel('d_{i1}^{obj}(cm)')
-set(gca, 'XScale', 'log')
-% set(gca, 'YScale', 'log')
-legend('$a_2$','$a_3$','$a_4$','Límite de desviación','Interpreter','Latex')
-set(gca,'FontSize',18)
-
+%% 
 %Grafica de autovalor Maximo
 figure;
 
